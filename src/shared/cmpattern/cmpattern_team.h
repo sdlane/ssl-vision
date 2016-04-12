@@ -38,11 +38,11 @@ Q_OBJECT
 
 friend class TeamSelector;
 friend class TeamDetector;
-signals:
+Q_SIGNALS:
    void signalTeamNameChanged();
-signals:
+Q_SIGNALS:
    void signalChangeOccured(VarType * item);
-protected slots:
+protected Q_SLOTS:
    void slotTeamNameChanged();
    void slotChangeOccured(VarType * item);
 protected:

@@ -223,7 +223,7 @@ class CaptureV4L : public CaptureInterface
 {
 #ifndef VDATA_NO_QT
     Q_OBJECT
-    public slots:
+    public Q_SLOTS:
     void changed(VarType * group);
 protected:
     QMutex mutex;

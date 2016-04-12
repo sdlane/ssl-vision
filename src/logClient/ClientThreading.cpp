@@ -131,7 +131,7 @@ int ViewUpdateThread::execute()
             drawMutex->unlock();
         }
 
-        emit update_frame(log_control->get_current_frame());
+        Q_EMIT update_frame(log_control->get_current_frame());
 
         //distance between frames in ms
         if(log_control->get_play_speed() == 0)
@@ -210,10 +210,10 @@ int ViewUpdateThread::start_play_record()
         std::cout << "Logfilegröße:  " << logs.log_size() << std::endl;
         std::cout << "Start Command: " << logs.mutable_log(0)->refbox_cmd() << std::endl;
         log_control->reset(logs.log_size());
-        emit log_size(logs.log_size());
+        Q_EMIT log_size(logs.log_size());
         //initializeSlider(int min, int max, int singleStep, int pageStep, int tickInterval)
-        emit initializeSlider(0, logs.log_size(), 1, 100, 1800);
-        emit showLogControl(true);
+        Q_EMIT initializeSlider(0, logs.log_size(), 1, 100, 1800);
+        Q_EMIT showLogControl(true);
     }
     else
     {
@@ -221,7 +221,7 @@ int ViewUpdateThread::start_play_record()
         return -1;
     }
     input.close();
-    emit change_play_button("  End Play  ");
+    Q_EMIT change_play_button("  End Play  ");
     return 0;
 }
 
@@ -230,8 +230,8 @@ void ViewUpdateThread::end_play_record()
     play = false;
     log_control->reset(0);
     logs.clear_log();
-    emit showLogControl(false);
-    emit change_play_button("Play Record");
+    Q_EMIT showLogControl(false);
+    Q_EMIT change_play_button("Play Record");
     std::cout << "Stopped Playing Record" << std::endl;
 }
 

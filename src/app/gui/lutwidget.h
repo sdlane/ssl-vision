@@ -44,7 +44,7 @@ protected:
     QToolBar * toolbar;
     void updateList(LUT3D * lut);
     LUTChannelMode _mode;
-protected slots:
+protected Q_SLOTS:
     void selectChannel(int c);
 public:
     GLLUTWidget * getGLLUTWidget();

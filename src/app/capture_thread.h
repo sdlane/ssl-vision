@@ -24,6 +24,7 @@
 #include "capturedc1394v2.h"
 #include "capturefromfile.h"
 #include "capturev4l.h"
+#include "capture_gige.h"
 #include "capture_generator.h"
 #include <QThread>
 #include "ringbuffer.h"
@@ -49,6 +50,7 @@ protected:
   CaptureInterface * capture;
   CaptureInterface * captureDC1394;
   CaptureInterface * captureV4L;
+  CaptureInterface * captureGigE;
   CaptureInterface * captureFiles;
   CaptureInterface * captureGenerator;
   AffinityManager * affinity;
@@ -58,6 +60,7 @@ protected:
   VarList * settings;
   VarList * dc1394;
   VarList * v4l;
+  VarList * gige;
   VarList * generator;
   VarList * fromfile;
   VarList * control;
@@ -69,7 +72,7 @@ protected:
   VarStringEnum * captureModule;
   Timer timer;
 
-public slots:
+public Q_SLOTS:
   bool init();
   bool stop();
   bool reset();

@@ -74,7 +74,7 @@ public:
   // to a newly created FieldLine object. If it fails, it returns NULL.
   static FieldLine* FromVarList(VarList* list);
 
-protected slots:
+protected Q_SLOTS:
   void Rename();
 };
 
@@ -117,7 +117,7 @@ public:
   // NULL.
   static FieldCircularArc* FromVarList(VarList* list);
 
-private slots:
+private Q_SLOTS:
   void Rename();
 };
 
@@ -153,10 +153,10 @@ public:
   ~RoboCupField();
 
  public:
-  signals:
+  Q_SIGNALS:
   void calibrationChanged();
 
-protected slots:
+protected Q_SLOTS:
   void ProcessNewFieldLines();
   void ProcessNewFieldArcs();
   void ResizeFieldLines();

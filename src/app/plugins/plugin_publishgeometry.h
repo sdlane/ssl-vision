@@ -45,7 +45,7 @@ protected:
   QMutex mutex;
   void sendGeometry();
   double last_t;
-protected slots:
+protected Q_SLOTS:
   void slotPublishTriggered();
 public:
     PluginPublishGeometry(FrameBuffer * fb, RoboCupSSLServer * server, const RoboCupField & field);

@@ -55,7 +55,7 @@ public:
     QLabel* distortionLabelRight;
     bool detectEdges;
 
-    public slots:
+    public Q_SLOTS:
     void is_clicked_initial();
     void is_clicked_full();
     void is_clicked_reset();

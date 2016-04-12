@@ -66,10 +66,10 @@ public:
     QPushButton *log_frame_forward;
     QLCDNumber *log_totalFrames;
 
-public slots:
+public Q_SLOTS:
     void initializeSlider(int, int, int, int, int);
 
-signals:
+Q_SIGNALS:
 
 };
 

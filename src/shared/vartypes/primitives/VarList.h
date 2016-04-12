@@ -43,7 +43,7 @@ namespace VarTypes {
   #endif
   protected:
     vector<VarType *> list;
-  signals:
+  Q_SIGNALS:
     void childAdded(VarType * child);
     void childRemoved(VarType * child);
   public:
@@ -59,13 +59,13 @@ namespace VarTypes {
     virtual string getString() const { return ""; }
 
     /// this will clear the list
-    virtual void resetToDefault() {lock(); for (unsigned int i=0;i<list.size();i++) { emit(childRemoved(list[i])); } list.clear();  unlock(); };
+    virtual void resetToDefault() {lock(); for (unsigned int i=0;i<list.size();i++) { Q_EMIT (childRemoved(list[i])); } list.clear();  unlock(); };
 
     /// prints the label and number of elements
     virtual void printdebug() const { printf("VarList named %s containing %zu element(s)\n",getName().c_str(), list.size()); }
 
     /// adds a VarType item to the end of the list.
-    int addChild(VarType * child) { lock(); list.push_back(child); emit(childAdded(child)); unlock(); changed(); return (list.size()-1);}
+    int addChild(VarType * child) { lock(); list.push_back(child); Q_EMIT (childAdded(child)); unlock(); changed(); return (list.size()-1);}
     bool removeChild(VarType * child) {
       lock();
       vector<VarType *> newlist;
@@ -83,7 +83,7 @@ namespace VarTypes {
       }
       unlock();
       if (found) {
-        emit(childRemoved(child));
+        Q_EMIT (childRemoved(child));
         changed();
       }
       return found;
@@ -166,7 +166,7 @@ namespace VarTypes {
       int after=list.size();
       if (after > before) {
         for (int i=before; i < after; i++) {
-          emit(childAdded(list[i]));
+          Q_EMIT (childAdded(list[i]));
         }
       }
       unlock();

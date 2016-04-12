@@ -142,11 +142,11 @@ public:
   void updateDetection (const SSL_DetectionFrame &detection );
   void updateFieldGeometry (const SSL_GeometryFieldSize &fieldSize );
 
-public slots:
+public Q_SLOTS:
   void resetView();
-private slots:
+private Q_SLOTS:
   void redraw();
-signals:
+Q_SIGNALS:
   void postRedraw();
 };
 

@@ -52,7 +52,7 @@ namespace VarTypes {
     VarItemDelegate * delegate;
     VarTreeModel * model;
     QVBoxLayout * l;
-  protected slots:
+  protected Q_SLOTS:
     void newItemChecksRows(const QModelIndex & parent, int start, int end);
     void checkDataChanged ( const QModelIndex & topLeft, const QModelIndex & bottomRight );
   public:
@@ -61,7 +61,7 @@ namespace VarTypes {
     virtual ~VarTreeView();
     void fitColumns(); //fit columns to data
     void expandAndFocus(VarType * search); //will focus on and expand an item, if it exists
-  public slots:
+  public Q_SLOTS:
     void search(const QString & text);
     void nextSearchResult();
   };

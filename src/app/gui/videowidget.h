@@ -49,7 +49,7 @@ class VideoWidget : public QWidget, public Ui_VideoWidget {
     VideoWidget(QString title = "Unnamed", QWidget * vis = 0);
     virtual ~VideoWidget();
 
-  public slots:
+  public Q_SLOTS:
     void processVideoStats(VideoStats stats);
     void toggleOn(bool val);
     void toggleWindow(bool val);

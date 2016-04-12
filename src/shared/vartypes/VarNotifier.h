@@ -45,11 +45,11 @@ namespace VarTypes {
     QHash<VarType *, VarNotificationType> senders;
     bool changed;
     QMutex mutex;
-  public slots:
+  public Q_SLOTS:
       void changeSlotOtherChange();
-  protected slots:
+  protected Q_SLOTS:
       void changeSlot(VarType * item);
-  signals:
+  Q_SIGNALS:
       void changeOccured(VarType * item);
   public:
       VarNotifier();

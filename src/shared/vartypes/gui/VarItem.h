@@ -63,7 +63,7 @@ public:
   virtual int type() const;
 friend class VarTreeModel;
 
-public slots:
+public Q_SLOTS:
   void changeUpdate();
 };
 

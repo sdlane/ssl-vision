@@ -171,14 +171,14 @@ public:
     }
   }
 
-public slots:
+public Q_SLOTS:
   void flipImage();
   void callZoomNormal();
   void callZoomFit();
   void callHelp();
   void saveImage();
 
-signals:
+Q_SIGNALS:
   void updateVideoStats(VideoStats);
   void signalMouseAction ( QMouseEvent * event, pixelloc loc );
   void signalKeyPressEvent ( QKeyEvent * event );

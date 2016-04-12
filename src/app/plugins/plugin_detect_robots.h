@@ -65,7 +65,7 @@ protected:
 
   void buildRegionTree(CMVision::ColorRegionList * colorlist);
 
-protected slots:
+protected Q_SLOTS:
     void teamDataChange();
 public:
     PluginDetectRobots(FrameBuffer * _buffer, LUT3D * lut, const CameraParameters& camera_params, const RoboCupField& field, CMPattern::TeamSelector * _global_team_selector_blue, CMPattern::TeamSelector * _global_team_selector_yellow);

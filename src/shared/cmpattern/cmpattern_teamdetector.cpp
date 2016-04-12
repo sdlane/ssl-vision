@@ -39,7 +39,7 @@ TeamDetectorSettings::TeamDetectorSettings(string external_file) {
 void TeamDetectorSettings::slotTeamNodeAdded(VarType * node) {
   team_vector.push_back(new Team((VarList *)node));
   connect(team_vector[team_vector.size()-1],SIGNAL(signalTeamNameChanged()),this,SIGNAL(teamInfoChanged()));
-  emit(teamInfoChanged());
+  Q_EMIT (teamInfoChanged());
 }
 
 void TeamDetectorSettings::slotAddPressed() {

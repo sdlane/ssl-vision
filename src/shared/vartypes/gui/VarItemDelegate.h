@@ -52,7 +52,7 @@ namespace VarTypes {
   public:
     VarItemDelegate(QObject *parent = 0);
     virtual ~VarItemDelegate();
-  public slots:
+  public Q_SLOTS:
     void editorChangeEvent();
   protected:
     virtual void paint ( QPainter * painter, const QStyleOptionViewItem & option, const QModelIndex & index ) const;

@@ -65,14 +65,14 @@ namespace VarTypes {
     mutex.lock();
     changed=true;
     mutex.unlock();
-    emit changeOccured(0);
+    Q_EMIT changeOccured(0);
   }
   
   void VarNotifier::changeSlot(VarType * item) {
     mutex.lock();
     changed=true;
     mutex.unlock();
-    emit changeOccured(item);
+    Q_EMIT changeOccured(item);
   }
   
   void VarNotifier::setChanged(bool value) {

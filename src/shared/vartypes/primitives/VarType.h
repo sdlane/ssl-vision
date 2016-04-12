@@ -82,7 +82,7 @@ namespace VarTypes {
   
   
   //if using QT, trigger the hasChanged() signal
-  #define VARTYPE_MACRO_CHANGED emit(hasChanged(this));
+  #define VARTYPE_MACRO_CHANGED Q_EMIT (hasChanged(this));
   
   #ifndef VDATA_NO_THREAD_SAFETY
     #define VARTYPE_MACRO_LOCK _mutex->lock();
@@ -100,7 +100,7 @@ namespace VarTypes {
 
     //if using QT, enable signals by employing the q_object macro
     Q_OBJECT
-  signals:
+  Q_SIGNALS:
     /// This signal is triggered when any data or flag of this VarType has changed.
     /// This includes changes that were done programmatically, as well through a GUI.
     /// It also includes changes to render-flags or other meta-data.
@@ -117,7 +117,7 @@ namespace VarTypes {
     /// This signal is triggered if data was written to an xml node
     void XMLwasWritten(VarType *);
   
-  public slots:
+  public Q_SLOTS:
     /// A slot to receive signals from a model-view system that editing of this item was just completed.
     void mvcEditCompleted() {
       wasEdited(this);

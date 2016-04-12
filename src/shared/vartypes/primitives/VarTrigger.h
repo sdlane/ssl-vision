@@ -43,13 +43,13 @@ namespace VarTypes {
   protected:
     int _counter;
     string label;
-  signals:
+  Q_SIGNALS:
     void signalTriggered();
-  protected slots:
+  protected Q_SLOTS:
     void trigger() {
       lock();
       _counter++;
-      emit(signalTriggered());
+      Q_EMIT (signalTriggered());
       unlock();
       changed();
       wasEdited((VarType*)this);

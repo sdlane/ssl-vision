@@ -152,7 +152,7 @@ protected:
   QAction * actionExclusiveMode;
   QAction * actionViewToggleBackground;
   QAction * actionViewToggleOtherChannels;
-  protected slots:
+  protected Q_SLOTS:
   void editUndo(); //performs an undo
   void editRedo(); //performs a redo
   void editStore(); //records a state for undoing (will also clear the redo stack)
@@ -242,13 +242,13 @@ public:
   {
     redraw();
   }
-public slots:
+public Q_SLOTS:
   virtual void redraw()
   {
     updateGL();
   }
 
-public slots:
+public Q_SLOTS:
   void callZoomNormal();
   void callZoomFit();
   void callHelp();
@@ -261,7 +261,7 @@ public slots:
     }
   }
   void clearSampler();
-signals:
+Q_SIGNALS:
   void updateVideoStats(VideoStats);
   void signalKeyPressEvent ( QKeyEvent * event );
 };

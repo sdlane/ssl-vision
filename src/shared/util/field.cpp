@@ -314,7 +314,7 @@ RoboCupField::RoboCupField() {
   connect(settings,SIGNAL(XMLwasRead(VarType*)),
           this, SLOT(InjectDefaults()));
 
-  emit calibrationChanged();
+  Q_EMIT calibrationChanged();
 }
 
 RoboCupField::~RoboCupField() {

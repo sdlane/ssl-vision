@@ -27,7 +27,7 @@
 #include <algorithm>
 
 // UnusedVar can suppress gcc warnings about unused variables.
-// MustCheckReturn lets a function emit a warning if its return value
+// MustCheckReturn lets a function Q_EMIT a warning if its return value
 // isn't used
 #if __GNUC__ >= 3
 # define UnusedVar __attribute__((unused))

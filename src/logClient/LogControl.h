@@ -39,7 +39,7 @@ public:
     int get_prop_next_frame();
     double get_play_speed();
 
-public slots:
+public Q_SLOTS:
     void log_forward();
     void log_backward();
     void log_play();
@@ -50,7 +50,7 @@ public slots:
     void log_frame_back();
     void goto_frame(int);
 
-signals:
+Q_SIGNALS:
     void update_speed(QString);
 
 private:

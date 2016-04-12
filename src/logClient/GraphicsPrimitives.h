@@ -100,7 +100,7 @@ class SoccerView : public QGraphicsView
     //LogPlayer data
     QPushButton* playLogfile;
 
-  public slots:
+  public Q_SLOTS:
     void change_play_button(QString text) {playLogfile->setText(text);}
 
   protected:

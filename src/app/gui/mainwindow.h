@@ -71,11 +71,11 @@ public:
   MainWindow(bool start_capture, bool enforce_affinity);
   virtual ~MainWindow();
   void init();
-  void Quit() { emit close(); }
+  void Quit() { Q_EMIT close(); }
   virtual void closeEvent(QCloseEvent * event );
   virtual void timerEvent(QTimerEvent * e);
 
-public slots:
+public Q_SLOTS:
   void slotSaveSettings();
 };
 

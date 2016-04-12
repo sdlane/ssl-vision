@@ -34,7 +34,7 @@ class TimeLine : public VarType {
   protected:
     TimePointer * cur;
     QList<TimeVar *> list;
-  public slots:
+  public Q_SLOTS:
     void slotPointerChange() {
       qDebug ( "TIME CHANGED\n" );
       changed();

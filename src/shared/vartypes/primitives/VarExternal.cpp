@@ -50,7 +50,7 @@ void VarExternal::loadExternal() {
   int after=list.size();
   if (after > before) {
     for (int i=before; i < after; i++) {
-        emit(childAdded(list[i]));
+        Q_EMIT (childAdded(list[i]));
     }
   }
   changed();

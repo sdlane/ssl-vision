@@ -63,10 +63,10 @@ class ViewUpdateThread : public QThread
     LogControl* log_control;
 
   //LogPlayer data
-  public slots:
+  public Q_SLOTS:
     void playLogfilePressed();
 
-  signals:
+  Q_SIGNALS:
     //Slider and QLCDNumber
     void update_frame(int);
     //QLCDNumber

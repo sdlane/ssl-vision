@@ -100,7 +100,7 @@ class LUT3D : public QObject {
     vector<LUTChannel> channels;
     vector<LUT3D *> derived_LUTs;
     QMutex mutex;
-  protected slots:
+  protected Q_SLOTS:
     void slotVBlobChange() {
       updateDerivedLUTs();
     }

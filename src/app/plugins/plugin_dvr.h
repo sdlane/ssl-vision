@@ -127,7 +127,7 @@ class DVRStream
 class PluginDVR : public VisionPlugin
 {
 Q_OBJECT
-protected slots:
+protected Q_SLOTS:
   void slotModeToggled();
   void slotPauseRefresh();
   void slotSeekModeToggled();

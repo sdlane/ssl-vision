@@ -26,11 +26,11 @@ void Team::slotTeamNameChanged() {
   if (_settings!=0) {
     _settings->setName(_team_name->getString());
   }
-  emit(signalTeamNameChanged());
+  Q_EMIT (signalTeamNameChanged());
 }
 
 void Team::slotChangeOccured(VarType * item) {
-  emit(signalChangeOccured(item));
+  Q_EMIT (signalChangeOccured(item));
 }
 
 

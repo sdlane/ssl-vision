@@ -60,9 +60,9 @@ Q_OBJECT
  VarList * teams; // a global variable, defining all teams
  VarTrigger * addTeam;
  vector<Team *> team_vector;
-signals:
+Q_SIGNALS:
   void teamInfoChanged();
- protected slots:
+ protected Q_SLOTS:
    void slotTeamNodeAdded(VarType * node);
    void slotAddPressed();
  public:
@@ -79,7 +79,7 @@ signals:
 
 class TeamSelector : public QObject {
 Q_OBJECT
-signals:
+Q_SIGNALS:
   void signalTeamDataChanged();
 protected:
   TeamDetectorSettings * _detector_settings;
@@ -114,14 +114,14 @@ protected:
       }
       current_team=new_team;
     }
-    emit(signalTeamDataChanged());
+    Q_EMIT (signalTeamDataChanged());
   }
-protected slots:
+protected Q_SLOTS:
   void slotTeamInfoChanged() {
     update();
   }
   void slotTeamDataChanged() {
-    emit(signalTeamDataChanged());
+    Q_EMIT (signalTeamDataChanged());
   }
 public:
   TeamSelector(string label, TeamDetectorSettings * detector_settings) {

@@ -153,5 +153,5 @@ void LogControl::update_play_speed()
     QString speed = QString::number(play_speed, 'g', 4);
 
     speed.append("x");
-    emit update_speed(speed);
+    Q_EMIT update_speed(speed);
 }

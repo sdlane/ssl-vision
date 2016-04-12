@@ -212,7 +212,7 @@ namespace VarTypes {
     updateAttributes(us);
     updateText(us);
     updateChildren(us);
-    emit(XMLwasWritten(this));
+    Q_EMIT (XMLwasWritten(this));
   }
   
   
@@ -238,7 +238,7 @@ namespace VarTypes {
     if (areFlagsSet(VARTYPE_FLAG_NOLOAD_ATTRIBUTES)==false) readAttributes(us);
     readText(us);
     readChildren(us);
-    emit(XMLwasRead(this));
+    Q_EMIT (XMLwasRead(this));
   }
   
   void VarType::loadExternal() {

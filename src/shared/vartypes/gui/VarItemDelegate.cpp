@@ -29,7 +29,7 @@ namespace VarTypes {
   }
   
   void VarItemDelegate::editorChangeEvent() {
-    emit(commitData((QWidget *)sender()));
+    Q_EMIT (commitData((QWidget *)sender()));
   }
   
   void VarItemDelegate::paint ( QPainter * painter, const QStyleOptionViewItem & option, const QModelIndex & index ) const {
