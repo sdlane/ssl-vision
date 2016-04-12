@@ -1,10 +1,11 @@
 tP = [-1000; -1200; 3500];
 
 theta = [20 190 -60];
-theta = [58.5190    3.2672 -160.5783];
-rotX = [1 0 0; 0 cos(deg2rad(theta(1))) -sin(deg2rad(theta(1))); 0 sin(deg2rad(theta(1))) cos(deg2rad(theta(1)))];
-rotY = [cos(deg2rad(theta(2))) 0 sin(deg2rad(theta(2))); 0 1 0; -sin(deg2rad(theta(2))) 0 cos(deg2rad(theta(2)))];
-rotZ = [cos(deg2rad(theta(3))) -sin(deg2rad(theta(3))) 0; sin(deg2rad(theta(3))) cos(deg2rad(theta(3))) 0; 0 0 1];
+theta = deg2rad(theta);
+%theta = [58.5190    3.2672 -160.5783];
+rotX = [1 0 0; 0 cos(theta(1)) -sin(theta(1)); 0 sin(theta(1)) cos(theta(1))];
+rotY = [cos(theta(2)) 0 sin(theta(2)); 0 1 0; -sin(theta(2)) 0 cos(theta(2))];
+rotZ = [cos(theta(3)) -sin(theta(3)) 0; sin(theta(3)) cos(theta(3)) 0; 0 0 1];
 rotMP = rotZ * rotY * rotX;
 
 rotM = rotMP';
