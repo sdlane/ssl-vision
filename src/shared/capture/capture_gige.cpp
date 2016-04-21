@@ -184,7 +184,8 @@ bool CaptureGigE::stopCapture()
   g_object_unref (camera);
   camera = NULL;
   stream = NULL;
-
+  cbData.isNewBuffer = false;
+  delete[] cbData.imageBuffer;
   return true;
 }
 
