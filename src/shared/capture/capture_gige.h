@@ -52,6 +52,14 @@
  please inform the author, but also consider contributing yourself,
  so that we can cover as many options as possible.
  */
+
+typedef struct {
+    QMutex *mutex;
+    unsigned char* imageBuffer;
+    bool isNewBuffer;
+    unsigned int width, height;
+} ApplicationData;
+
 #ifndef VDATA_NO_QT
 #include <QMutex>
 //if using QT, inherit QObject as a base
@@ -70,6 +78,8 @@ public:
 #endif
     
 protected:
+  
+    ApplicationData cbData;
     ArvCamera *camera;
     ArvStream* stream;
     const char* dev_name;
@@ -116,7 +126,7 @@ protected:
     int ring_buffer_size;
     int cam_count;
     RawImage rawFrame;
-    
+    unsigned int bufferCount;
     VarList * dcam_parameters;
     VarList * capture_settings;
     VarList * conversion_settings;

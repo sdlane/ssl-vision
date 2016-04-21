@@ -42,51 +42,6 @@
 #include <fcntl.h>      //open
 #include <unistd.h>     //close
 
-/*
-static void
-new_buffer_cb (ArvStream *stream, void* buffer, QMutex mutex)
-{
-  
-  ArvBuffer *buffer;
-  static int bufferCount = 0;
-  buffer = arv_stream_try_pop_buffer (stream);
-  if (buffer != NULL) {
-	  if (arv_buffer_get_status (buffer) == ARV_BUFFER_STATUS_SUCCESS)
-		  bufferCount++;
-	  mutex.lock();
-	  int arv_row_stride;
-	  int width, height;
-	  char *buffer_data;
-	  size_t buffer_size;
-
-	  buffer_data = (char *) arv_buffer_get_data (buffer, &buffer_size);
-	  
-	  mutex.unlock();
-	  arv_stream_push_buffer (stream, buffer);
-  }
-}
-*/
-	  
-static void
-control_lost_cb (ArvGvDevice *gv_device)
-{
-	/* Control of the device is lost. Display a message and force application exit */
-	printf ("Control lost\n");
-}
-
-void CaptureGigE::discoverDevices(char** deviceList, int* nDevices)
-{
-  arv_update_device_list();
-  *nDevices = arv_get_n_devices ();
-  deviceList = new char*[*nDevices];
-  for(int dev = 0; dev < *nDevices; dev++) {
-    //deviceList[dev] = arv_get_device_id(dev);
-    cout << "Device " << dev << ": " << arv_get_device_id(dev) << endl;
-  }
-}
-
-//======================= GUI & API Definitions =======================
-
 #ifndef VDATA_NO_QT
 CaptureGigE::CaptureGigE(VarList * _settings,int default_camera_id, QObject * parent) : QObject(parent), CaptureInterface(_settings)
 #else
@@ -117,6 +72,8 @@ CaptureGigE::CaptureGigE(VarList * _settings,int default_camera_id) : CaptureInt
   //capture_settings->addChild(v_buffer_size      = new VarInt("ringbuffer size",V4L_STREAMBUFS));
   //v_buffer_size->addFlags(VARTYPE_FLAG_READONLY);
 
+  is_capturing = false;
+  currentFrame = NULL;
 #ifndef VDATA_NO_QT
     mutex.unlock();
 #endif
@@ -173,6 +130,38 @@ bool CaptureGigE::resetBus() {
     
 }
 
+
+
+static void
+new_buffer_cb (ArvStream *stream, ApplicationData* data)
+{
+	ArvBuffer *buffer;
+	buffer = arv_stream_try_pop_buffer (stream);
+	if (buffer != NULL) {
+		if (arv_buffer_get_status (buffer) == ARV_BUFFER_STATUS_SUCCESS) {
+		  bool isLock = data->mutex->tryLock();
+		  if(isLock == true) {
+		    data->isNewBuffer = true;
+		    size_t bufferSize;
+		    unsigned char* imageBuffer = (unsigned char*) arv_buffer_get_data (buffer, &bufferSize);
+		    memcpy(data->imageBuffer, imageBuffer, bufferSize);
+		    data->width = arv_buffer_get_image_width(buffer);
+		    data->height = arv_buffer_get_image_height(buffer);
+		    data->mutex->unlock();
+		  }
+		}
+			
+		/* Image processing here */
+		arv_stream_push_buffer (stream, buffer);
+	}
+}
+
+static void control_lost_cb (ArvGvDevice *gv_device)
+{
+  /* Control of the device is lost. Display a message and force application exit */
+  fprintf(stderr, "Control lost\n");
+}
+
 bool CaptureGigE::stopCapture()
 {
   if (isCapturing() == false) {
@@ -211,62 +200,58 @@ bool CaptureGigE::startCapture()
     stopCapture();
   
   is_capturing = false;
-  int camID = v_cam_bus->getInt();
-  arv_update_device_list();
-  int nDevices = arv_get_n_devices ();
-  if(nDevices < camID) {
-    cout << "Max ID is " << nDevices;
-    #ifndef VDATA_NO_QT
-      mutex.unlock();
-    #endif
-    return false;
-  }
   
-  dev_name = arv_get_device_id(camID);
-  camera = arv_camera_new (dev_name);
+  camera = arv_camera_new (NULL);
   
   if (camera == NULL) {
-    cout << "Could not connect to the camera: " << dev_name << endl;
+    fprintf(stderr, "Could not connect to the camera: %s\n", dev_name);
     #ifndef VDATA_NO_QT
       mutex.unlock();
     #endif
     return false;
   }
-  /* Set frame rate to 10 Hz */
-  //TODO: Make frame rate configurable
-  //arv_camera_set_frame_rate (camera, 45.0);
   
-  //TODO: Make pixel format configurable
-  arv_camera_set_pixel_format(camera, ARV_PIXEL_FORMAT_RGB_8_PACKED);
-  
-  /* retrieve image payload (number of bytes per image) */
+  //arv_camera_set_region (camera, 0, 0, v_width->getInt(), v_height->getInt());
+  width = v_width->get();
+  height = v_height->get();
   int payload = arv_camera_get_payload (camera);
+  fprintf(stderr, "payload: %d, width: %d, height: %d", payload, v_width->getInt(), v_height->getInt());
+  /* retrieve image payload (number of bytes per image) */
   stream = arv_camera_create_stream (camera, NULL, NULL);
   if (stream == NULL) {
-    cout << "Could not create stream for " << dev_name << endl;
+    g_object_unref(camera);
+    camera = NULL;
+    fprintf(stderr, "Could not create stream for %s\n", dev_name);
     #ifndef VDATA_NO_QT
       mutex.unlock();
     #endif
     return false;
-    
   }
-  ArvPixelFormat pixel_format = arv_camera_get_pixel_format (camera);
-  const char* pxString = arv_camera_get_pixel_format_as_string (camera);
+  
   /* Push 50 buffer in the stream input buffer queue */
   for (int i = 0; i < 50; i++)
     arv_stream_push_buffer (stream, arv_buffer_new (payload, NULL));
   
   /* Start the video stream */
   arv_camera_start_acquisition (camera);
-
+  
+  cbData.mutex = &mutex;
+  cbData.imageBuffer = new unsigned char[payload];
+  cbData.isNewBuffer = false;
   /* Connect the new-buffer signal */
-  //g_signal_connect (stream, "new-buffer", G_CALLBACK (new_buffer_cb), this);
+  g_signal_connect (stream, "new-buffer", G_CALLBACK (new_buffer_cb), &cbData);
+  /* And enable emission of this signal (it's disabled by default for performance reason) */
+  arv_stream_set_emit_signals (stream, TRUE);
 
+  /* Connect the control-lost signal */
+  g_signal_connect (arv_camera_get_device (camera), "control-lost", G_CALLBACK (control_lost_cb), NULL);
+  
   is_capturing = true;  
   
 #ifndef VDATA_NO_QT
   mutex.unlock();
 #endif
+  fprintf(stderr, "Camera started\n");
   return true;
 }
 
@@ -301,29 +286,34 @@ bool CaptureGigE::convertFrame(const RawImage & src, RawImage & target, ColorFor
         memcpy(target.getData(),src.getData(),src.getNumBytes());
     } else {
         //do some more fancy conversion
-        /*if ((src_fmt==COLOR_MONO8 || src_fmt==COLOR_RAW8) && output_fmt==COLOR_RGB8) {
-            Conversions::y2rgb (src.getData(), target.getData(), width, height);
+        if ((src_fmt==COLOR_MONO8 || src_fmt==COLOR_RAW8) && output_fmt==COLOR_RGB8) {
+	    dc1394_bayer_decoding_8bit( src.getData(), target.getData(), src.getWidth(), src.getHeight(), DC1394_COLOR_FILTER_RGGB, DC1394_BAYER_METHOD_NEAREST);
+            //Conversions::y2rgb (src.getData(), target.getData(), width, height);
         } else if ((src_fmt==COLOR_MONO16 || src_fmt==COLOR_RAW16)) {
             if (output_fmt==COLOR_RGB8) {
                 Conversions::y162rgb (src.getData(), target.getData(), width, height, y16bits);
             }
             else {
+	      /* Haresh
                 fprintf(stderr,"Cannot copy and convert frame...unknown conversion selected from: %s to %s\n",
                         Colors::colorFormatToString(src_fmt).c_str(),
                         Colors::colorFormatToString(output_fmt).c_str());
+              */
 #ifndef VDATA_NO_QT
                 mutex.unlock();
 #endif
                 return false;
             }
-        } else */ if (src_fmt==COLOR_RGB8 && output_fmt==COLOR_YUV422_UYVY) {
+        } else if (src_fmt==COLOR_RGB8 && output_fmt==COLOR_YUV422_UYVY) {
             Conversions::rgb2uyvy (src.getData(), target.getData(), width, height);
         } else if (src_fmt==COLOR_RGB8 && output_fmt==COLOR_YUV422_YUYV) {
             Conversions::rgb2yuyv (src.getData(), target.getData(), width, height);
         } else {
+	  /* Haresh
             fprintf(stderr,"Cannot copy and convert frame...unknown conversion selected from: %s to %s\n",
                     Colors::colorFormatToString(src_fmt).c_str(),
                     Colors::colorFormatToString(output_fmt).c_str());
+                    */
     #ifndef VDATA_NO_QT
             mutex.unlock();
     #endif
@@ -343,54 +333,27 @@ RawImage CaptureGigE::getFrame()
 #endif
     
   RawImage result;
-  fprintf(stderr, "CaptureVFL::getFrame %d", is_capturing);
-  result.setColorFormat(COLOR_RGB8);
-  result.setWidth(0);
-  result.setHeight(0);
-  //result.size= RawImage::computeImageSize(format, width*height);
-  result.setTime(0.0);
-
-  ArvBuffer *buffer;
-  static int bufferCount = 0;
-  //buffer = arv_stream_pop_buffer (stream);
-  buffer = arv_stream_try_pop_buffer (stream);
-  if (buffer != NULL) {
-    
-    if (arv_buffer_get_status (buffer) == ARV_BUFFER_STATUS_SUCCESS) {
-      result.setWidth(arv_buffer_get_image_width(buffer));
-      result.setHeight(arv_buffer_get_image_height(buffer));
-  
-      bufferCount++;
-      unsigned char *buffer_data;
-      size_t buffer_size;
-
-      buffer_data = (unsigned char *) arv_buffer_get_data (buffer, &buffer_size);
-      if(currentFrame == NULL) {
-	currentFrame = new unsigned char[buffer_size];
-      }
-      memcpy(currentFrame, buffer_data, buffer_size);
-      
-
+  //fprintf(stderr, "Received full buffer %d\n", cbData.buffer_count);
+  if(cbData.isNewBuffer == true){
+      cbData.isNewBuffer = false;
+      result.setColorFormat(COLOR_RAW8);
+      result.setData(cbData.imageBuffer);
       struct timeval tv;
       gettimeofday(&tv,NULL);
-      result.setTime((double)tv.tv_sec + tv.tv_usec*(1.0E-6)); 
-      result.setData(currentFrame);
-    }
-    arv_stream_push_buffer (stream, buffer);
-  }  
-  
-  
+      result.setTime((double)tv.tv_sec + tv.tv_usec*(1.0E-6));
+      result.setHeight(cbData.height);
+      result.setWidth(cbData.width);
+  }
 #ifndef VDATA_NO_QT
     mutex.unlock();
 #endif
-    return rawFrame;
+  return result;
 }
 
 void CaptureGigE::releaseFrame() {
 #ifndef VDATA_NO_QT
     mutex.lock();
 #endif
-    
     //frame management done at low-level now...
 #ifndef VDATA_NO_QT
     mutex.unlock();
