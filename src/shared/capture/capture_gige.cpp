@@ -187,11 +187,49 @@ void CaptureGigE::readParameterValues(VarList * item) {
 }
 
 void CaptureGigE::writeParameterValues(VarList * item) {
+  if(camera == NULL)
+    return;
+  
+  #ifndef VDATA_NO_QT
+    mutex.lock();
+  #endif
+  dc1394bool_t dcb;
+  
+  VarDouble * vabs=0;
+  VarInt * vint=0;
+  VarBool * vuseabs=0;
+  VarBool * venabled=0;
+  VarBool * vauto=0;
+  VarInt * vint2=0;
+  VarInt * vint3=0;
+  VarBool * vwasread=0;
+  VarTrigger * vtrigger=0;
+  
+  vector<VarType *> children=item->getChildren();
+  for (unsigned int i=0;i<children.size();i++) {
+    if (children[i]->getType()==VARTYPE_ID_BOOL && children[i]->getName()=="was_read") vwasread=(VarBool *)children[i];
+    if (children[i]->getType()==VARTYPE_ID_BOOL && children[i]->getName()=="enabled") venabled=(VarBool *)children[i];
+    if (children[i]->getType()==VARTYPE_ID_BOOL && children[i]->getName()=="auto") vauto=(VarBool *)children[i];
+    if (children[i]->getType()==VARTYPE_ID_BOOL && children[i]->getName()=="use absolute") vuseabs=(VarBool *)children[i];
+    if (children[i]->getType()==VARTYPE_ID_INT && children[i]->getName()=="value") vint=(VarInt *)children[i];
+    if (children[i]->getType()==VARTYPE_ID_DOUBLE && children[i]->getName()=="absolute value") vabs=(VarDouble *)children[i];
+    if (children[i]->getType()==VARTYPE_ID_TRIGGER && children[i]->getName()=="one-push") vtrigger=(VarTrigger *)children[i];
+  }
+  
   if(item == P_EXPOSURE) {
     if(arv_camera_is_exposure_time_available(camera) == false) {
       return;
     }
-    
+    if (vtrigger!=0 && vtrigger->getCounter() > 0) {
+      vtrigger->resetCounter();
+      printf("ONE PUSH for %s!\n",item->getName().c_str());
+      arv_camera_set_exposure_time_auto(camera, ARV_AUTO_ONCE);
+    } else {
+      arv_camera_set_exposure_time_auto(camera, vauto->getBool() ? ARV_AUTO_CONTINUOUS : ARV_AUTO_OFF);
+      if (vauto->getBool()==false) {
+	arv_camera_set_exposure_time(camera, vabs->getDouble());
+      }
+    }
   }
 }
 
