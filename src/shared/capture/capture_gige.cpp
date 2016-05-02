@@ -43,7 +43,7 @@
 #include <unistd.h>     //close
 
 #ifndef VDATA_NO_QT
-CaptureGigE::CaptureGigE(VarList * _settings,int default_camera_id, QObject * parent) : QObject(parent), CaptureInterface(_settings)
+CaptureGigE::CaptureGigE(VarList * _settings,int default_camera_id, QObject * parent) : QObject(parent), camera(NULL), CaptureInterface(_settings)
 #else
 CaptureGigE::CaptureGigE(VarList * _settings,int default_camera_id) : CaptureInterface(_settings)
 #endif
@@ -53,7 +53,8 @@ CaptureGigE::CaptureGigE(VarList * _settings,int default_camera_id) : CaptureInt
 #endif
   settings->addChild(conversion_settings = new VarList("Conversion Settings"));
   settings->addChild(capture_settings = new VarList("Capture Settings"));
-    
+  settings->addChild(camera_parameters  = new VarList("Camera Parameters"));
+  
   //=======================CONVERSION SETTINGS=======================
   conversion_settings->addChild(v_colorout=new VarStringEnum("convert to mode",Colors::colorFormatToString(COLOR_RGB8)));
   v_colorout->addItem(Colors::colorFormatToString(COLOR_RGB8));
@@ -68,15 +69,40 @@ CaptureGigE::CaptureGigE(VarList * _settings,int default_camera_id) : CaptureInt
   capture_settings->addChild(v_top           = new VarInt("top",0));
   capture_settings->addChild(v_colormode        = new VarStringEnum("capture mode",Colors::colorFormatToString(COLOR_RGB8)));
   v_colormode->addItem(Colors::colorFormatToString(COLOR_RGB8));
-
-  //capture_settings->addChild(v_buffer_size      = new VarInt("ringbuffer size",V4L_STREAMBUFS));
+  capture_settings->addChild(v_buffer_size      = new VarInt("Buffer Queue size",50));
   //v_buffer_size->addFlags(VARTYPE_FLAG_READONLY);
-
+  
+  camera_parameters->addFlags( VARTYPE_FLAG_HIDE_CHILDREN );
+  
+  camera_parameters->addChild(P_EXPOSURE = new VarList("exposure"));
+  P_EXPOSURE->addChild(new VarBool("enabled"));
+  P_EXPOSURE->addChild(new VarBool("auto"));
+  P_EXPOSURE->addChild(new VarTrigger("one-push","Auto!"));
+  P_EXPOSURE->addChild(new VarInt("value"));
+  P_EXPOSURE->addChild(new VarBool("use absolute"));
+  P_EXPOSURE->addChild(new VarDouble("absolute value"));
+  #ifndef VDATA_NO_QT
+    mvc_connect(P_EXPOSURE);
+  #endif
+  
+  
+  camera_parameters->addChild(P_BRIGHTNESS = new VarList("brightness"));
+  P_BRIGHTNESS->addChild(new VarBool("enabled"));
+  P_BRIGHTNESS->addChild(new VarBool("default"));
+  P_BRIGHTNESS->addChild(new VarInt("value"));
+  
+  
+  
   is_capturing = false;
   currentFrame = NULL;
 #ifndef VDATA_NO_QT
     mutex.unlock();
 #endif
+}
+
+int CaptureGigE::getNoDevices() {
+  arv_update_device_list();
+  return arv_get_n_devices();
 }
 
 #ifndef VDATA_NO_QT
@@ -98,7 +124,12 @@ void CaptureGigE::changed(VarType * group) {
 
 
 void CaptureGigE::readAllParameterValues() {
-  
+  vector<VarType *> v=camera_parameters->getChildren();
+  for (unsigned int i=0;i<v.size();i++) {
+    if (v[i]->getType()==VARTYPE_ID_LIST) {
+      readParameterValues((VarList *)v[i]);
+    }
+  }
 }
 
 void CaptureGigE::writeAllParameterValues() {
@@ -106,11 +137,62 @@ void CaptureGigE::writeAllParameterValues() {
 }
 
 void CaptureGigE::readParameterValues(VarList * item) {
+  if(camera == NULL) {
+    return;
+  }
+  vector<VarType *> children=item->getChildren();
   
+  VarDouble * vabs=0;
+  VarInt * vint=0;
+  VarBool * vuseabs=0;
+  VarBool * venabled=0;
+  VarBool * vauto=0;
+  VarBool * vwasread=0;
+  VarTrigger * vtrigger=0;
+  VarInt * vint2=0;
+  VarInt * vint3=0;
+  
+  if(item == P_EXPOSURE) {
+    if(arv_camera_is_exposure_time_available(camera) == false) {
+      return;
+    }
+    camera_parameters->removeFlags(VARTYPE_FLAG_HIDE_CHILDREN );
+    vector<VarType *> children=item->getChildren();
+    for (unsigned int i=0;i<children.size();i++) {
+      if (children[i]->getType()==VARTYPE_ID_BOOL && children[i]->getName()=="was_read") vwasread=(VarBool *)children[i];
+      if (children[i]->getType()==VARTYPE_ID_BOOL && children[i]->getName()=="enabled") venabled=(VarBool *)children[i];
+      if (children[i]->getType()==VARTYPE_ID_BOOL && children[i]->getName()=="auto") vauto=(VarBool *)children[i];
+      if (children[i]->getType()==VARTYPE_ID_BOOL && children[i]->getName()=="use absolute") vuseabs=(VarBool *)children[i];
+      if (children[i]->getType()==VARTYPE_ID_INT && children[i]->getName()=="value") vint=(VarInt *)children[i];
+      if (children[i]->getType()==VARTYPE_ID_DOUBLE && children[i]->getName()=="absolute value") vabs=(VarDouble *)children[i];
+      if (children[i]->getType()==VARTYPE_ID_TRIGGER && children[i]->getName()=="one-push") vtrigger=(VarTrigger *)children[i];
+    }
+    if (vwasread!=0) vwasread->setBool(false);
+    ArvAuto isAuto = arv_camera_get_exposure_time_auto(camera);
+    /* ArvAuto:
+    *  @ARV_AUTO_OFF: manual setting
+    *  @ARV_AUTO_ONCE: automatic setting done once, then returns to manual
+    *  @ARV_AUTO_CONTINUOUS: setting is adjusted continuously
+    */
+    if (isAuto==ARV_AUTO_CONTINUOUS) {
+      vauto->setBool(true);
+    } else if (isAuto==ARV_AUTO_OFF || isAuto==ARV_AUTO_ONCE) {
+      vauto->setBool(false);
+    }
+    vuseabs->setBool(true);
+    vabs->setDouble(arv_camera_get_exposure_time(camera));
+    vuseabs->removeFlags( VARTYPE_FLAG_READONLY);
+    venabled->setBool(true);
+  }
 }
 
 void CaptureGigE::writeParameterValues(VarList * item) {
-  
+  if(item == P_EXPOSURE) {
+    if(arv_camera_is_exposure_time_available(camera) == false) {
+      return;
+    }
+    
+  }
 }
 
 CaptureGigE::~CaptureGigE()
@@ -129,8 +211,6 @@ bool CaptureGigE::resetBus() {
     return true;
     
 }
-
-
 
 static void
 new_buffer_cb (ArvStream *stream, ApplicationData* data)
@@ -158,6 +238,7 @@ new_buffer_cb (ArvStream *stream, ApplicationData* data)
 
 static void control_lost_cb (ArvGvDevice *gv_device)
 {
+  //TODO: Handle this
   /* Control of the device is lost. Display a message and force application exit */
   fprintf(stderr, "Control lost\n");
 }
@@ -202,10 +283,12 @@ bool CaptureGigE::startCapture()
   
   is_capturing = false;
   
-  camera = arv_camera_new (NULL);
+  const char* deviceID = arv_get_device_id(v_cam_bus->getInt());
+  fprintf(stderr, "Connecting to %s\n", deviceID);
+  camera = arv_camera_new (deviceID);
   
   if (camera == NULL) {
-    fprintf(stderr, "Could not connect to the camera: %s\n", dev_name);
+    fprintf(stderr, "Could not connect to the camera: %s\n", deviceID);
     #ifndef VDATA_NO_QT
       mutex.unlock();
     #endif
@@ -222,7 +305,7 @@ bool CaptureGigE::startCapture()
   if (stream == NULL) {
     g_object_unref(camera);
     camera = NULL;
-    fprintf(stderr, "Could not create stream for %s\n", dev_name);
+    fprintf(stderr, "Could not create stream for %s\n", deviceID);
     #ifndef VDATA_NO_QT
       mutex.unlock();
     #endif
@@ -230,7 +313,7 @@ bool CaptureGigE::startCapture()
   }
   
   /* Push 50 buffer in the stream input buffer queue */
-  for (int i = 0; i < 50; i++)
+  for (int i = 0; i < v_buffer_size->getInt(); i++)
     arv_stream_push_buffer (stream, arv_buffer_new (payload, NULL));
   
   /* Start the video stream */
@@ -252,7 +335,7 @@ bool CaptureGigE::startCapture()
 #ifndef VDATA_NO_QT
   mutex.unlock();
 #endif
-  fprintf(stderr, "Camera started\n");
+  fprintf(stderr, "%s started\n", deviceID);
   return true;
 }
 
@@ -352,17 +435,20 @@ RawImage CaptureGigE::getFrame()
 }
 
 void CaptureGigE::releaseFrame() {
+  //frame management done at low-level now...
+  return;
+  
 #ifndef VDATA_NO_QT
     mutex.lock();
 #endif
-    //frame management done at low-level now...
+    
 #ifndef VDATA_NO_QT
     mutex.unlock();
 #endif
 }
 
 string CaptureGigE::getCaptureMethodName() const {
-    return "V4L";
+    return "GigE";
 }
 
 

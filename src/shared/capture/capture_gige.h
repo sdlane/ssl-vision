@@ -84,7 +84,7 @@ protected:
     ArvStream* stream;
     const char* dev_name;
   
-    void discoverDevices(char** deviceList, int* nDevices);
+    static int getNoDevices();
   
     unsigned char* currentFrame;
 
@@ -127,7 +127,7 @@ protected:
     int cam_count;
     RawImage rawFrame;
     unsigned int bufferCount;
-    VarList * dcam_parameters;
+    VarList * camera_parameters;
     VarList * capture_settings;
     VarList * conversion_settings;
     
