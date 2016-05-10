@@ -61,8 +61,8 @@ CaptureGigE::CaptureGigE(VarList * _settings,int default_camera_id) : CaptureInt
   
   //=======================CAPTURE SETTINGS==========================
   //TODO: set default camera id
-  capture_settings->addChild(v_cam_bus          = new VarInt("cam idx",1));
-  capture_settings->addChild(v_fps              = new VarInt("framerate",30));
+  capture_settings->addChild(v_cam_bus          = new VarInt("cam idx",0));
+  capture_settings->addChild(v_fps              = new VarInt("framerate",3));
   capture_settings->addChild(v_width            = new VarInt("width",640));
   capture_settings->addChild(v_height           = new VarInt("height",480));
   capture_settings->addChild(v_left            = new VarInt("left",0));
@@ -91,8 +91,14 @@ CaptureGigE::CaptureGigE(VarList * _settings,int default_camera_id) : CaptureInt
   P_BRIGHTNESS->addChild(new VarBool("default"));
   P_BRIGHTNESS->addChild(new VarInt("value"));
   
-  
-  
+  camera_parameters->addChild(P_FRAME_RATE = new VarList("frame rate"));
+  P_FRAME_RATE->addChild(new VarBool("enabled"));
+  P_FRAME_RATE->addChild(new VarInt("value"));
+  P_FRAME_RATE->addChild(new VarDouble("absolute value"));
+  #ifndef VDATA_NO_QT
+    mvc_connect(P_FRAME_RATE);
+  #endif
+    
   is_capturing = false;
   currentFrame = NULL;
 #ifndef VDATA_NO_QT
@@ -133,7 +139,12 @@ void CaptureGigE::readAllParameterValues() {
 }
 
 void CaptureGigE::writeAllParameterValues() {
-  
+  vector<VarType *> v=camera_parameters->getChildren();
+  for (unsigned int i=0;i<v.size();i++) {
+    if (v[i]->getType()==VARTYPE_ID_LIST) {
+      writeParameterValues((VarList *)v[i]);
+    }
+  }
 }
 
 void CaptureGigE::readParameterValues(VarList * item) {
@@ -152,21 +163,23 @@ void CaptureGigE::readParameterValues(VarList * item) {
   VarInt * vint2=0;
   VarInt * vint3=0;
   
+  for (unsigned int i=0;i<children.size();i++) {
+    if (children[i]->getType()==VARTYPE_ID_BOOL && children[i]->getName()=="was_read") vwasread=(VarBool *)children[i];
+    if (children[i]->getType()==VARTYPE_ID_BOOL && children[i]->getName()=="enabled") venabled=(VarBool *)children[i];
+    if (children[i]->getType()==VARTYPE_ID_BOOL && children[i]->getName()=="auto") vauto=(VarBool *)children[i];
+    if (children[i]->getType()==VARTYPE_ID_BOOL && children[i]->getName()=="use absolute") vuseabs=(VarBool *)children[i];
+    if (children[i]->getType()==VARTYPE_ID_INT && children[i]->getName()=="value") vint=(VarInt *)children[i];
+    if (children[i]->getType()==VARTYPE_ID_DOUBLE && children[i]->getName()=="absolute value") vabs=(VarDouble *)children[i];
+    if (children[i]->getType()==VARTYPE_ID_TRIGGER && children[i]->getName()=="one-push") vtrigger=(VarTrigger *)children[i];
+  }
+  
   if(item == P_EXPOSURE) {
     if(arv_camera_is_exposure_time_available(camera) == false) {
       return;
     }
     camera_parameters->removeFlags(VARTYPE_FLAG_HIDE_CHILDREN );
     vector<VarType *> children=item->getChildren();
-    for (unsigned int i=0;i<children.size();i++) {
-      if (children[i]->getType()==VARTYPE_ID_BOOL && children[i]->getName()=="was_read") vwasread=(VarBool *)children[i];
-      if (children[i]->getType()==VARTYPE_ID_BOOL && children[i]->getName()=="enabled") venabled=(VarBool *)children[i];
-      if (children[i]->getType()==VARTYPE_ID_BOOL && children[i]->getName()=="auto") vauto=(VarBool *)children[i];
-      if (children[i]->getType()==VARTYPE_ID_BOOL && children[i]->getName()=="use absolute") vuseabs=(VarBool *)children[i];
-      if (children[i]->getType()==VARTYPE_ID_INT && children[i]->getName()=="value") vint=(VarInt *)children[i];
-      if (children[i]->getType()==VARTYPE_ID_DOUBLE && children[i]->getName()=="absolute value") vabs=(VarDouble *)children[i];
-      if (children[i]->getType()==VARTYPE_ID_TRIGGER && children[i]->getName()=="one-push") vtrigger=(VarTrigger *)children[i];
-    }
+
     if (vwasread!=0) vwasread->setBool(false);
     ArvAuto isAuto = arv_camera_get_exposure_time_auto(camera);
     /* ArvAuto:
@@ -182,6 +195,11 @@ void CaptureGigE::readParameterValues(VarList * item) {
     vuseabs->setBool(true);
     vabs->setDouble(arv_camera_get_exposure_time(camera));
     vuseabs->removeFlags( VARTYPE_FLAG_READONLY);
+    venabled->setBool(true);
+  } else if(item == P_FRAME_RATE) {
+    camera_parameters->removeFlags(VARTYPE_FLAG_HIDE_CHILDREN );
+    if (vwasread!=0) vwasread->setBool(false);
+    vabs->setDouble(arv_camera_get_frame_rate(camera));
     venabled->setBool(true);
   }
 }
@@ -218,7 +236,7 @@ void CaptureGigE::writeParameterValues(VarList * item) {
   
   if(item == P_EXPOSURE) {
     if(arv_camera_is_exposure_time_available(camera) == false) {
-      return;
+      goto EXIT_WRITE;
     }
     if (vtrigger!=0 && vtrigger->getCounter() > 0) {
       vtrigger->resetCounter();
@@ -230,7 +248,28 @@ void CaptureGigE::writeParameterValues(VarList * item) {
 	arv_camera_set_exposure_time(camera, vabs->getDouble());
       }
     }
+  } 
+  
+  if(item == P_FRAME_RATE) {
+    bool isAvail = arv_camera_is_frame_rate_available(camera);
+    fprintf(stderr, "IsAvail: %d\n", isAvail);
+    if(isAvail == false) {
+      goto EXIT_WRITE;
+    }
+    double reqFrameRate = vabs->getDouble();
+    double minFR, maxFR;
+    arv_camera_get_frame_rate_bounds(camera, &minFR, &maxFR);
+    fprintf(stderr, "Min: %f, Max: %f, Req:%f\n", minFR, maxFR, reqFrameRate);
+    if(reqFrameRate < minFR || reqFrameRate > maxFR) {
+      goto EXIT_WRITE;
+    }
+    arv_camera_set_frame_rate(camera, reqFrameRate);
   }
+  
+  EXIT_WRITE:
+#ifndef VDATA_NO_QT
+    mutex.unlock();
+#endif
 }
 
 CaptureGigE::~CaptureGigE()
@@ -320,7 +359,7 @@ bool CaptureGigE::startCapture()
     stopCapture();
   
   is_capturing = false;
-  
+  arv_update_device_list();
   const char* deviceID = arv_get_device_id(v_cam_bus->getInt());
   fprintf(stderr, "Connecting to %s\n", deviceID);
   camera = arv_camera_new (deviceID);
